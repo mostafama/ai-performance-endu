@@ -1,7 +1,7 @@
-# EduQuestion3 — Minimal Reproduction Package
+# Cognitive Complexity and AI Performance: Evaluating Language Models Across Bloom’s Taxonomy for Educational Contexts
 
 This package contains the complete pipeline for the Honours thesis
-**"Evaluating Large Language Models Across Bloom's Taxonomy"**
+**"Cognitive Complexity and AI Performance: Evaluating Large Language Models Across Bloom's Taxonomy"**
 (University of British Columbia Okanagan, 2026).
 
 It covers three steps: labelling questions with Bloom's taxonomy levels,
@@ -66,7 +66,7 @@ If your questions don't yet have Bloom labels, run the labeler first (see below)
 
 ---
 
-## Step 1 — Label questions with Bloom's taxonomy
+## Step 1: Label questions with Bloom's taxonomy
 
 If your questions already have `bloom_level` and `bloom_name` columns populated,
 skip this step.
@@ -105,7 +105,7 @@ python run.py label --questions questions.csv --model gpt-4o-mini
 
 ---
 
-## Step 2 — Query LLMs
+## Step 2: Query LLMs
 
 **Using a named study run (defined in `config.py`)**
 
@@ -128,7 +128,7 @@ python run.py query \
 
 ---
 
-## Step 3 — Evaluate responses
+## Step 3: Evaluate responses
 
 **Using a named evaluation config**
 
