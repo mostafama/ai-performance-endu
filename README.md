@@ -25,7 +25,7 @@ python run.py query --run all
 python run.py evaluate --config all
 ```
 
-The labeling step (Step 1 below) can be skipped — `questions.csv` already
+The labeling step (Step 1 below) can be skipped. `questions.csv` already
 has `bloom_level` and `bloom_name` populated for all 4,476 questions.
 
 ## Project structure
@@ -175,7 +175,7 @@ python run.py evaluate \
 ## Resuming interrupted runs
 
 All three steps support resuming. If an output CSV already exists, completed
-rows are detected and skipped automatically — just re-run the same command.
+rows are detected and skipped automatically, just re-run the same command.
 
 ---
 
@@ -212,7 +212,7 @@ The final scores CSV contains one row per (question, model) pair:
 python -m pytest tests/ -v
 ```
 
-153 tests, no API keys or data files needed — all external calls are mocked.
+153 tests, no API keys or data files needed (all external calls are mocked).
 
 | Test file | What it covers |
 |---|---|
@@ -229,7 +229,7 @@ python -m pytest tests/ -v
 
 ## Notes
 
-- `questions.csv` is included with all 4,476 benchmark questions. Questions from 8 datasets are reproduced in full under their open licenses (MIT, Apache 2.0, CC BY-SA 4.0). AGIEval questions (206) are redacted — only the first 8 words of each question are shown — because College Board prohibits redistribution of SAT content for AI use. To reproduce the AGIEval portion, obtain those questions from the AGIEval GitHub repository and join by `question_id`.
+- `questions.csv` is included with all 4,476 benchmark questions. Questions from 8 datasets are reproduced in full under their open licenses (MIT, Apache 2.0, CC BY-SA 4.0). AGIEval questions (206) are redacted; only the first 8 words of each question are shown because College Board prohibits redistribution of SAT content for AI use. To reproduce the AGIEval portion, obtain those questions from the AGIEval GitHub repository and join by `question_id`.
 - `OPENAI_API_KEY` is used for labeling, GPT model querying, and all judge calls.
 - Token counts are word-count approximations, not exact API token counts.
 
@@ -357,7 +357,7 @@ If you use this pipeline or the questions in `questions.csv`, please cite the or
 If you use this pipeline or build on this work, please cite:
 
 ```
-@thesis{shah2026bloomllm,
+@thesis{mehta2026bloomllm,
   author = {Mehta, Prina},
   title  = {Evaluating Large Language Models Across Bloom's Taxonomy},
   school = {University of British Columbia Okanagan},
