@@ -1,0 +1,19 @@
+# Core data handling
+pandas>=2.0.0
+openpyxl>=3.1.0          # needed for reading .xlsx question files
+
+# Environment / config
+python-dotenv>=1.0.0
+
+# LLM provider SDKs
+openai>=1.30.0            # used for GPT models, judge calls, and OpenRouter (shared SDK)
+google-generativeai>=0.8.0
+anthropic>=0.40.0
+groq>=0.9.0
+
+# Evaluation metrics
+rouge-score>=0.1.2
+sacrebleu>=2.4.0
+
+# Testing
+pytest>=8.0.0             # run with: python -m pytest tests/ -v
