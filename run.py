@@ -1,7 +1,7 @@
 """
 run.py
 ------
-Unified command-line entry point for the EduQuestion3 pipeline.
+Unified command-line entry point for the ai-performance-endu evaluation pipeline.
 
 Three subcommands:
   label     — Assign Bloom's taxonomy levels to questions using an LLM classifier
@@ -11,24 +11,24 @@ Three subcommands:
 Usage examples:
 
   # Assign Bloom labels to all unlabelled questions in questions.csv
-  python run.py label --questions questions.csv
+  python run.py label --questions data/questions.csv
 
   # Re-classify all questions from scratch
-  python run.py label --questions questions.csv --relabel
+  python run.py label --questions data/questions.csv --relabel
 
   # Query using a named study run from config.py
   python run.py query --run gpt_gemini
 
   # Query with custom model + file arguments
   python run.py query --models gpt-4o-mini claude-sonnet-4.5 \
-      --questions questions.csv --output my_responses.csv
+      --questions data/questions.csv --output my_responses.csv
 
   # Evaluate using a named config from config.py
   python run.py evaluate --config gpt_gemini
 
   # Evaluate with custom arguments
   python run.py evaluate --responses my_responses.csv \
-      --questions questions.csv --output my_scores.csv
+      --questions data/questions.csv --output my_scores.csv
 """
 
 import argparse
@@ -91,7 +91,7 @@ def run_evaluate(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="EduQuestion3 — label questions, query LLMs, and evaluate responses"
+        description="ai-performance-endu — label questions, query LLMs, and evaluate responses"
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

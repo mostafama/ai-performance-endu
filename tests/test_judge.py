@@ -58,7 +58,7 @@ class TestBuildJudgePrompt:
     def test_output_format_labels_are_present(self):
         """The prompt must include all expected output field labels."""
         for label in ["CORRECTNESS", "COMPLETENESS", "CLARITY",
-                      "COGNITIVE_ALIGNMENT", "OVERALL_SCORE", "JUSTIFICATION"]:
+                      "COGNITIVE_ALIGNMENT", "JUSTIFICATION"]:
             assert label in self.prompt, f"Missing label: {label}"
 
 
@@ -74,7 +74,6 @@ class TestParseJudgeResponse:
             "COMPLETENESS: 7\n"
             "CLARITY: 9\n"
             "COGNITIVE_ALIGNMENT: 6\n"
-            "OVERALL_SCORE: 8\n"
             "JUSTIFICATION: Good answer but incomplete."
         )
         result = parse_judge_response(text)
@@ -82,7 +81,8 @@ class TestParseJudgeResponse:
         assert result["completeness"] == 7
         assert result["clarity"] == 9
         assert result["cognitive_alignment"] == 6
-        assert result["overall_score"] == 8
+        # overall is the arithmetic mean of the four dimensions: (8+7+9+6)/4
+        assert result["overall_score"] == 7.5
         assert result["justification"] == "Good answer but incomplete."
 
     def test_missing_overall_score_is_computed_as_mean(self):
@@ -175,12 +175,12 @@ class TestCallJudge:
         """A successful judge call should return a dict with parsed scores."""
         content = (
             "CORRECTNESS: 8\nCOMPLETENESS: 7\nCLARITY: 9\n"
-            "COGNITIVE_ALIGNMENT: 6\nOVERALL_SCORE: 7\nJUSTIFICATION: Good."
+            "COGNITIVE_ALIGNMENT: 6\nJUSTIFICATION: Good."
         )
         client = self._make_mock_client(content)
         result = call_judge(client, "gpt-4.1-mini", "some prompt")
         assert result["correctness"] == 8
-        assert result["overall_score"] == 7
+        assert result["overall_score"] == 7.5
 
     def test_single_call_made_on_success(self):
         """The API should only be called once if the first attempt succeeds."""

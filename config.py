@@ -1,7 +1,7 @@
 """
 config.py
 ---------
-Central settings file for the EduQuestion3 pipeline.
+Central settings file for the ai-performance-endu evaluation pipeline.
 All model definitions, prompt templates, study runs, and evaluation configs
 live here so you never need to touch the logic files to change settings.
 """
@@ -30,12 +30,6 @@ MODELS_CONFIG = {
     "claude-sonnet-4.5": {
         "api": "anthropic",
         "model_id": "claude-sonnet-4-5-20251101",   # versioned snapshot — Nov 2025
-        "temperature": 0.0,
-        "max_tokens": 8192,
-    },
-    "claude-3.5-sonnet": {
-        "api": "anthropic",
-        "model_id": "claude-3-5-sonnet-20241022",   # Oct 2024 snapshot (20240620 retired Oct 2025)
         "temperature": 0.0,
         "max_tokens": 8192,
     },
@@ -97,22 +91,22 @@ FALLBACK_TEMPLATE = "Please provide a clear, well-reasoned answer."
 STUDY_RUNS = {
     "gpt_gemini": {
         "models": ["gpt-4o-mini", "gemini-2.5-flash"],
-        "questions": ["questions.csv"],
+        "questions": ["data/questions.csv"],
         "output": "responses_gpt_gemini.csv",
     },
     "claude": {
         "models": ["claude-sonnet-4.5"],
-        "questions": ["questions.csv"],
+        "questions": ["data/questions.csv"],
         "output": "responses_claude.csv",
     },
     "llama": {
         "models": ["llama-3.3-70b", "llama-3.1-8b"],
-        "questions": ["questions.csv"],
+        "questions": ["data/questions.csv"],
         "output": "responses_llama.csv",
     },
     "deepseek": {
         "models": ["deepseek-v3.2"],
-        "questions": ["questions.csv"],
+        "questions": ["data/questions.csv"],
         "output": "responses_deepseek.csv",
     },
 }
@@ -129,28 +123,28 @@ STUDY_RUNS = {
 EVALUATION_CONFIGS = {
     "gpt_gemini": {
         "description": "GPT-4o-mini and Gemini-2.5-flash",
-        "questions_csv": ["questions.csv"],
+        "questions_csv": ["data/questions.csv"],
         "responses_csv": "responses_gpt_gemini.csv",
         "output_csv": "scores_gpt_gemini.csv",
         "judge_model": "gpt-4.1-mini",      # alias → gpt-4.1-mini-2025-04-14
     },
     "claude": {
         "description": "Claude Sonnet 4.5",
-        "questions_csv": ["questions.csv"],
+        "questions_csv": ["data/questions.csv"],
         "responses_csv": "responses_claude.csv",
         "output_csv": "scores_claude.csv",
         "judge_model": "gpt-4.1-mini",
     },
     "llama": {
         "description": "LLaMA-3.3-70B and LLaMA-3.1-8B",
-        "questions_csv": ["questions.csv"],
+        "questions_csv": ["data/questions.csv"],
         "responses_csv": "responses_llama.csv",
         "output_csv": "scores_llama.csv",
         "judge_model": "gpt-4.1-mini",
     },
     "deepseek": {
         "description": "DeepSeek-V3.2",
-        "questions_csv": ["questions.csv"],
+        "questions_csv": ["data/questions.csv"],
         "responses_csv": "responses_deepseek.csv",
         "output_csv": "scores_deepseek.csv",
         "judge_model": "gpt-4.1-mini",

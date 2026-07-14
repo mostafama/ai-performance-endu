@@ -89,7 +89,7 @@ def init_clients(models):
                 # Optional headers identify your app to OpenRouter
                 extra = {}
                 site = os.getenv("OPENROUTER_SITE_URL", "")
-                name = os.getenv("OPENROUTER_APP_NAME", "EduQuestion3")
+                name = os.getenv("OPENROUTER_APP_NAME", "ai-performance-endu")
                 if site:
                     extra["HTTP-Referer"] = site
                 if name:

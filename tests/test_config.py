@@ -98,20 +98,20 @@ class TestStudyRuns:
 
     def test_all_runs_use_only_questions_csv(self):
         """
-        All study runs must use a single questions file: questions.csv.
+        All study runs must use a single questions file: data/questions.csv.
         There should be no per-run question file divergence that could cause
         query/eval config mismatches.
         """
         for name, run in config.STUDY_RUNS.items():
-            assert run["questions"] == ["questions.csv"], (
-                f"Run '{name}' should use only questions.csv, got {run['questions']}"
+            assert run["questions"] == ["data/questions.csv"], (
+                f"Run '{name}' should use only data/questions.csv, got {run['questions']}"
             )
 
     def test_all_eval_configs_use_only_questions_csv(self):
-        """Evaluation configs must also reference only questions.csv."""
+        """Evaluation configs must also reference only data/questions.csv."""
         for name, cfg in config.EVALUATION_CONFIGS.items():
-            assert cfg["questions_csv"] == ["questions.csv"], (
-                f"Eval config '{name}' should use only questions.csv, got {cfg['questions_csv']}"
+            assert cfg["questions_csv"] == ["data/questions.csv"], (
+                f"Eval config '{name}' should use only data/questions.csv, got {cfg['questions_csv']}"
             )
 
     def test_query_and_eval_question_files_match(self):

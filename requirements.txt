@@ -17,3 +17,8 @@ sacrebleu>=2.4.0
 
 # Testing
 pytest>=8.0.0             # run with: python -m pytest tests/ -v
+
+# Analysis / reproduction of paper tables and statistics (analysis.py)
+numpy>=1.24.0
+statsmodels>=0.14.0       # two-way ANOVA + partial eta-squared
+matplotlib>=3.7.0         # figure regeneration (figures.py)

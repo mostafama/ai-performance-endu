@@ -39,13 +39,13 @@ def make_questions_csv(rows, path=None):
     return path
 
 
-def make_mock_client(level=3, name="Apply", confidence=0.92, justification="Uses a procedure."):
+def make_mock_client(level=3, name="Apply", confidence="H", justification="Uses a procedure."):
     """Return a mock OpenAI client that returns a fixed Bloom label response."""
     content = (
-        f"LEVEL: {level}\n"
-        f"NAME: {name}\n"
-        f"CONFIDENCE: {confidence}\n"
-        f"JUSTIFICATION: {justification}"
+        f"Primary Level: {level}\n"
+        f"Level Name: {name}\n"
+        f"Confidence: {confidence}\n"
+        f"Reasoning: {justification}"
     )
     mock_resp = MagicMock()
     mock_resp.choices[0].message.content = content
@@ -76,7 +76,7 @@ class TestBuildLabelingPrompt:
     def test_output_format_instructions_present(self):
         """Prompt must instruct the model to output LEVEL, NAME, CONFIDENCE, JUSTIFICATION."""
         prompt = build_labeling_prompt("Some question?", "science")
-        for label in ["LEVEL", "NAME", "CONFIDENCE", "JUSTIFICATION"]:
+        for label in ["Primary Level", "Level Name", "Confidence", "Reasoning"]:
             assert label in prompt
 
     def test_different_domains_produce_different_prompts(self):
@@ -91,11 +91,11 @@ class TestBuildLabelingPrompt:
 
 class TestParseLabelingResponse:
     def test_full_valid_response(self):
-        text = "LEVEL: 3\nNAME: Apply\nCONFIDENCE: 0.92\nJUSTIFICATION: Uses a procedure."
+        text = "Primary Level: 3\nLevel Name: Apply\nConfidence: H\nReasoning: Uses a procedure."
         result = parse_labeling_response(text)
         assert result["bloom_level"] == 3
         assert result["bloom_name"] == "Apply"        # canonical name from config
-        assert result["bloom_confidence"] == 0.92
+        assert result["bloom_confidence"] == "High"
         assert result["bloom_justification"] == "Uses a procedure."
 
     def test_canonical_name_used_even_if_model_uses_wrong_case(self):
@@ -103,28 +103,35 @@ class TestParseLabelingResponse:
         The canonical bloom_name should always come from config.BLOOM_LEVELS,
         not from whatever the model wrote. This guarantees consistent casing.
         """
-        text = "LEVEL: 2\nNAME: understand\nCONFIDENCE: 0.8\nJUSTIFICATION: ok"
+        text = "Primary Level: 2\nLevel Name: understand\nConfidence: M\nReasoning: ok"
         result = parse_labeling_response(text)
         assert result["bloom_name"] == config.BLOOM_LEVELS[2]  # "Understand"
 
     def test_all_six_levels_parse_correctly(self):
         for level, name in config.BLOOM_LEVELS.items():
-            text = f"LEVEL: {level}\nNAME: {name}\nCONFIDENCE: 0.9\nJUSTIFICATION: ok"
+            text = f"Primary Level: {level}\nLevel Name: {name}\nConfidence: H\nReasoning: ok"
             result = parse_labeling_response(text)
             assert result["bloom_level"] == level
             assert result["bloom_name"] == name
 
     def test_level_with_trailing_text_is_parsed(self):
         """Model sometimes writes '3 (Apply)' — only the digit should be extracted."""
-        text = "LEVEL: 3 (Apply)\nNAME: Apply\nCONFIDENCE: 0.9\nJUSTIFICATION: ok"
+        text = "Primary Level: 3 (Apply)\nLevel Name: Apply\nConfidence: H\nReasoning: ok"
         result = parse_labeling_response(text)
         assert result["bloom_level"] == 3
 
-    def test_confidence_as_integer_is_parsed(self):
-        """Model might write '1' instead of '1.0' — should still parse."""
-        text = "LEVEL: 1\nNAME: Remember\nCONFIDENCE: 1\nJUSTIFICATION: ok"
+    def test_confidence_letter_tokens_are_mapped(self):
+        """H / M / L map to the canonical word forms stored in questions.csv."""
+        for token, expected in [("H", "High"), ("M", "Medium"), ("L", "Low")]:
+            text = f"Primary Level: 1\nLevel Name: Remember\nConfidence: {token}\nReasoning: ok"
+            result = parse_labeling_response(text)
+            assert result["bloom_confidence"] == expected
+
+    def test_confidence_full_word_is_parsed(self):
+        """Full words (High/Medium/Low), any case, also parse."""
+        text = "Primary Level: 1\nLevel Name: Remember\nConfidence: high\nReasoning: ok"
         result = parse_labeling_response(text)
-        assert result["bloom_confidence"] == 1.0
+        assert result["bloom_confidence"] == "High"
 
     def test_empty_response_returns_none_fields(self):
         result = parse_labeling_response("")
@@ -135,20 +142,20 @@ class TestParseLabelingResponse:
 
     def test_invalid_level_returns_none(self):
         """Level 7 doesn't exist in Bloom's taxonomy — should return None."""
-        text = "LEVEL: 7\nNAME: ???\nCONFIDENCE: 0.5\nJUSTIFICATION: ok"
+        text = "Primary Level: 7\nLevel Name: ???\nConfidence: M\nReasoning: ok"
         result = parse_labeling_response(text)
         assert result["bloom_level"] is None
 
     def test_justification_with_colon_preserved(self):
         """Justification text may itself contain colons."""
-        text = "LEVEL: 4\nNAME: Analyze\nCONFIDENCE: 0.85\nJUSTIFICATION: The question asks: compare two approaches."
+        text = "Primary Level: 4\nLevel Name: Analyze\nConfidence: M\nReasoning: The question asks: compare two approaches."
         result = parse_labeling_response(text)
         assert "The question asks: compare two approaches." == result["bloom_justification"]
 
-    def test_confidence_is_rounded_to_three_decimals(self):
-        text = "LEVEL: 3\nNAME: Apply\nCONFIDENCE: 0.91666\nJUSTIFICATION: ok"
+    def test_unknown_confidence_returns_none(self):
+        text = "Primary Level: 3\nLevel Name: Apply\nConfidence: ???\nReasoning: ok"
         result = parse_labeling_response(text)
-        assert result["bloom_confidence"] == 0.917
+        assert result["bloom_confidence"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -170,7 +177,7 @@ class TestQuestionLabeler:
             {"question_id": "q002", "question_text": "Solve 2x=10",
              "domain": "math", "bloom_level": None, "bloom_name": None},
         ]
-        client = make_mock_client(level=2, name="Understand", confidence=0.88)
+        client = make_mock_client(level=2, name="Understand", confidence="M")
         labeler, path = self._make_labeler(rows, client)
 
         labeler.run()
@@ -178,7 +185,7 @@ class TestQuestionLabeler:
         result = pd.read_csv(path)
         assert result.iloc[0]["bloom_level"] == 2
         assert result.iloc[0]["bloom_name"] == "Understand"
-        assert result.iloc[0]["bloom_confidence"] == 0.88
+        assert result.iloc[0]["bloom_confidence"] == "Medium"
         os.unlink(path)
 
     def test_already_labelled_questions_are_skipped(self):
@@ -192,7 +199,7 @@ class TestQuestionLabeler:
         call_count = [0]
         mock_resp = MagicMock()
         mock_resp.choices[0].message.content = (
-            "LEVEL: 2\nNAME: Understand\nCONFIDENCE: 0.9\nJUSTIFICATION: ok"
+            "Primary Level: 2\nLevel Name: Understand\nConfidence: H\nReasoning: ok"
         )
         mock_client = MagicMock()
         def count_and_return(**kwargs):
@@ -219,7 +226,7 @@ class TestQuestionLabeler:
         call_count = [0]
         mock_resp = MagicMock()
         mock_resp.choices[0].message.content = (
-            "LEVEL: 5\nNAME: Evaluate\nCONFIDENCE: 0.95\nJUSTIFICATION: re-labelled"
+            "Primary Level: 5\nLevel Name: Evaluate\nConfidence: H\nReasoning: re-labelled"
         )
         mock_client = MagicMock()
         def count_and_return(**kwargs):
@@ -241,7 +248,7 @@ class TestQuestionLabeler:
         """The labeler should overwrite the input CSV with updated labels."""
         rows = [{"question_id": "q001", "question_text": "Q?",
                  "domain": "science", "bloom_level": None, "bloom_name": None}]
-        client = make_mock_client(level=1, name="Remember", confidence=0.99)
+        client = make_mock_client(level=1, name="Remember", confidence="H")
         labeler, path = self._make_labeler(rows, client)
         labeler.run()
 

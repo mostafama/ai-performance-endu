@@ -131,7 +131,7 @@ class TestNormalRun:
         assert row["completeness"] == 7
         assert row["clarity"] == 9
         assert row["cognitive_alignment"] == 6
-        assert row["overall_score"] == 7
+        assert row["overall_score"] == 7.5   # arithmetic mean of the four dimensions
         assert row["justification"] == "Solid answer."
         os.unlink(out)
 

@@ -41,10 +41,13 @@ The study investigates whether **cognitive complexity** explains model performan
 ├── judge.py                  # Rubric scoring implementation
 ├── metrics.py                # BLEU / ROUGE / lexical metrics
 ├── data_loader.py            # Dataset loading utilities
-├── questions.csv             # Benchmark questions
+├── analysis.py               # Regenerates the tables and statistics in the paper
+├── figures.py                # Regenerates Figures 2, 3, and 4
+├── data/
+│   ├── questions.csv         # Benchmark questions (4,476)
+│   └── scores.csv            # Scored responses (26,856)
 ├── requirements.txt
-├── tests/
-└── outputs/
+└── tests/
 ```
 
 ---
@@ -143,6 +146,8 @@ Total:
 
 **4,476 questions**
 
+Questions from eight of the nine datasets are included in full. AGIEval question text (206 questions) is redacted in `data/questions.csv`, because the underlying SAT content may not be redistributed. Bloom labels, difficulty labels, and all scores for those questions are retained. To reconstruct the AGIEval text, obtain it from the AGIEval repository and join on `question_id`.
+
 ---
 
 # Installation
@@ -173,10 +178,16 @@ Install dependencies.
 pip install -r requirements.txt
 ```
 
+The analysis and figure scripts additionally require `statsmodels` and `matplotlib`.
+
+```bash
+pip install statsmodels matplotlib
+```
+
 Copy the environment template.
 
 ```bash
-cp .env.template .env
+cp env.template .env
 ```
 
 Add the required API keys.
@@ -190,7 +201,7 @@ Add the required API keys.
 Skip this step if using the provided benchmark.
 
 ```bash
-python run.py label --questions questions.csv
+python run.py label --questions data/questions.csv
 ```
 
 ---
@@ -211,6 +222,25 @@ python run.py evaluate --config all
 
 ---
 
+## 4. Reproduce the Reported Results
+
+The scored responses used in the paper are provided in `data/scores.csv`, so this step can be run directly without repeating Steps 1 to 3.
+
+```bash
+python analysis.py
+python figures.py
+```
+
+`analysis.py` regenerates the per-model rubric table, the per-domain table, the two-way ANOVA with partial eta-squared for Bloom level and difficulty, the Higher-Order means, the latency summary, and the BLEU range. `figures.py` regenerates Figures 2, 3, and 4.
+
+To run either script on newly generated scores instead, pass `--scores`.
+
+```bash
+python analysis.py --scores your_scores.csv
+```
+
+---
+
 # Output
 
 The pipeline produces:
@@ -226,6 +256,16 @@ These outputs reproduce the analyses presented in the paper.
 
 ---
 
+# Tests
+
+```bash
+python -m pytest tests/ -v
+```
+
+The suite contains 154 tests and requires no API keys or data files, as all external calls are mocked.
+
+---
+
 # Reproducibility Notes
 
 For reproducibility:
@@ -237,6 +277,7 @@ For reproducibility:
 - Fixed random seed for sampling
 - Bloom classification performed after sampling
 - Human validation performed independently of automated evaluation
+- The overall score is computed as the arithmetic mean of the four rubric dimensions
 
 ---
 
@@ -256,7 +297,5 @@ and Domain Effects.
 ---
 
 # License
-
-This repository is released for academic and research purposes.
 
 Please consult the accompanying LICENSE file for details.

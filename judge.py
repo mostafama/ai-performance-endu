@@ -50,7 +50,6 @@ CORRECTNESS: [0-10]
 COMPLETENESS: [0-10]
 CLARITY: [0-10]
 COGNITIVE_ALIGNMENT: [0-10]
-OVERALL_SCORE: [0-10]
 JUSTIFICATION: [2-3 sentences]
 """
 
@@ -72,7 +71,8 @@ def parse_judge_response(text):
     Parse the judge's text output into a structured scores dict.
 
     Expects lines like "CORRECTNESS: 8" or "JUSTIFICATION: The response..."
-    If OVERALL_SCORE is missing, it's computed as the mean of the four sub-scores.
+    The overall score is always computed as the arithmetic mean of the four
+    sub-scores (per Section 3.5 of the paper), not read from the judge output.
 
     Returns:
         dict with keys: correctness, completeness, clarity,
@@ -101,20 +101,18 @@ def parse_judge_response(text):
             result["clarity"] = _parse_score(value)
         elif key == "COGNITIVE_ALIGNMENT":
             result["cognitive_alignment"] = _parse_score(value)
-        elif key == "OVERALL_SCORE":
-            result["overall_score"] = _parse_score(value)
         elif key == "JUSTIFICATION":
             result["justification"] = value
 
-    # If judge didn't provide an overall score, compute it from sub-scores
-    if result["overall_score"] is None:
-        sub = [
-            v for k, v in result.items()
-            if k in ["correctness", "completeness", "clarity", "cognitive_alignment"]
-            and v is not None
-        ]
-        if sub:
-            result["overall_score"] = round(sum(sub) / len(sub), 2)
+    # Per the paper (Section 3.5), the overall score is the arithmetic mean of
+    # the four rubric dimensions — never a value the judge self-reports.
+    sub = [
+        v for k, v in result.items()
+        if k in ["correctness", "completeness", "clarity", "cognitive_alignment"]
+        and v is not None
+    ]
+    if sub:
+        result["overall_score"] = round(sum(sub) / len(sub), 2)
 
     return result
 

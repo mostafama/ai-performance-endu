@@ -20,9 +20,9 @@ bloom_level, bloom_name, and bloom_confidence columns populated.
 Questions that already have a bloom_level are skipped unless --relabel is passed.
 
 Usage:
-    python run.py label --questions questions.csv
-    python run.py label --questions questions.csv --relabel
-    python run.py label --questions questions.csv --model gpt-4.1-mini
+    python run.py label --questions data/questions.csv
+    python run.py label --questions data/questions.csv --relabel
+    python run.py label --questions data/questions.csv --model gpt-4.1-mini
 """
 
 import os
@@ -43,32 +43,95 @@ load_dotenv()
 # Prompt
 # ---------------------------------------------------------------------------
 
+# Few-shot exemplars covering all six Bloom's levels across all four domains.
+# These anchor the classifier on the cognitive *process* rather than difficulty
+# and mirror the prompt described in Appendix A of the paper.
+FEWSHOT_EXAMPLES = [
+    ("science", "State the chemical symbol for sodium.",
+     1, "Remember", "H",
+     "Requires recall of a single fact with no transformation, matching the "
+     "operational criterion for Remember."),
+    ("reading", "In your own words, explain the main idea of the passage.",
+     2, "Understand", "H",
+     "Asks for interpretation and restatement in the student's own words, the "
+     "operational criterion for Understand."),
+    ("math", "Using the quadratic formula, solve x^2 - 5x + 6 = 0.",
+     3, "Apply", "H",
+     "Executes a known procedure (the quadratic formula) in a specific case; "
+     "a hard formula-application problem is Apply, not higher."),
+    ("computer_science",
+     "Compare two sorting algorithms and identify which is more efficient for "
+     "nearly-sorted input.",
+     4, "Analyze", "H",
+     "Requires decomposition and comparison of components, the operational "
+     "criterion for Analyse; comparing two approaches is Analyse, not Apply."),
+    ("reading",
+     "Judge whether the author's argument is well supported, citing specific "
+     "evidence for your assessment.",
+     5, "Evaluate", "M",
+     "Demands a judgement against explicit criteria with justification, the "
+     "operational criterion for Evaluate."),
+    ("computer_science",
+     "Design a data structure that supports insertion and range-sum queries in "
+     "logarithmic time.",
+     6, "Create", "M",
+     "Calls for generation of a novel design/artefact, the operational "
+     "criterion for Create."),
+]
+
+
+def _format_fewshot():
+    """Render the few-shot exemplars in the same strict output format."""
+    blocks = []
+    for domain, q, level, name, conf, reasoning in FEWSHOT_EXAMPLES:
+        blocks.append(
+            f"QUESTION DOMAIN: {domain}\n"
+            f"QUESTION: {q}\n"
+            f"Primary Level: {level}\n"
+            f"Level Name: {name}\n"
+            f"Confidence: {conf}\n"
+            f"Reasoning: {reasoning}"
+        )
+    return "\n\n".join(blocks)
+
+
 def build_labeling_prompt(question_text, domain):
     """
     Build the classification prompt for a single question.
 
-    The prompt asks the judge to output a single structured block so it can
-    be parsed reliably without fragile regex over free-form text.
+    Matches the few-shot prompt described in Appendix A of the paper: an
+    educational-psychologist role, an instruction to classify by the cognitive
+    *process* rather than difficulty, three tie-break guidelines, worked
+    examples spanning all six levels and all four domains, and a strict,
+    parseable output block.
     """
     levels_block = "\n".join(
         f"  {level} — {name}"
         for level, name in config.BLOOM_LEVELS.items()
     )
-    return f"""You are an expert in educational assessment and Bloom's Revised Taxonomy.
-
-Classify the following question into exactly one of the six Bloom's levels.
+    return f"""Role: Expert educational psychologist specialising in Bloom's Revised Taxonomy.
+Task: Classify the question by the cognitive process required, not its difficulty.
 
 BLOOM'S LEVELS:
 {levels_block}
 
+Guidelines:
+(1) If multiple levels apply, assign the highest.
+(2) A hard problem requiring formula application is Apply, not higher.
+(3) A question asking to compare two approaches is Analyse, not Apply.
+
+EXAMPLES:
+{_format_fewshot()}
+
+Now classify the following question.
 QUESTION DOMAIN: {domain}
 QUESTION: {question_text}
 
 Respond in exactly this format — no other text:
-LEVEL: [1-6]
-NAME: [level name]
-CONFIDENCE: [0.0-1.0]
-JUSTIFICATION: [one sentence explaining why]
+Primary Level: [1-6]
+Level Name: [name]
+Confidence: [H/M/L]
+Reasoning: [2-3 sentences citing the operational criterion]
 """
 
 
@@ -99,7 +162,9 @@ def parse_labeling_response(text):
         key   = key.strip().upper()
         value = value.strip()
 
-        if key == "LEVEL":
+        # Accept both the paper's field names ("Primary Level", "Level Name",
+        # "Reasoning") and the shorter aliases for robustness.
+        if key in ("PRIMARY LEVEL", "LEVEL"):
             # Extract leading digit in case the model writes "3 (Apply)"
             m = re.match(r"(\d)", value)
             if m:
@@ -110,14 +175,26 @@ def parse_labeling_response(text):
                     result["bloom_name"]  = config.BLOOM_LEVELS[level]
 
         elif key == "CONFIDENCE":
-            m = re.match(r"(\d+\.?\d*)", value)
-            if m:
-                result["bloom_confidence"] = round(float(m.group(1)), 3)
+            result["bloom_confidence"] = _map_confidence(value)
 
-        elif key == "JUSTIFICATION":
+        elif key in ("REASONING", "JUSTIFICATION"):
             result["bloom_justification"] = value
 
     return result
+
+
+def _map_confidence(value):
+    """
+    Map a categorical confidence token to its canonical word form.
+
+    Accepts H / M / L or High / Medium / Low (any case) and returns
+    "High", "Medium", or "Low" to match the labels stored in questions.csv.
+    Returns None for anything unrecognised.
+    """
+    if not value:
+        return None
+    first = value.strip().upper()[:1]
+    return {"H": "High", "M": "Medium", "L": "Low"}.get(first)
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +232,7 @@ class QuestionLabeler:
         bloom_dtypes = {
             "bloom_level":         "Int64",   # nullable integer (pandas extension type)
             "bloom_name":          "object",
-            "bloom_confidence":    "float64",
+            "bloom_confidence":    "object",   # categorical: High / Medium / Low
             "bloom_justification": "object",
         }
         for col, dtype in bloom_dtypes.items():
